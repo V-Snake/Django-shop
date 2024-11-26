@@ -13,6 +13,7 @@ import {
   Typography,
   Button,
   Pagination,
+  Slider,
 } from '@mui/material';
 import { Link } from 'react-router-dom';
 
@@ -21,16 +22,26 @@ function CatalogPage() {
   const [count, setCount] = useState(0); // Nombre total de produits
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const PAGE_SIZE = 5; // Doit correspondre à PAGE_SIZE dans le backend
+  const PAGE_SIZE = 5; // Correspond à PAGE_SIZE dans le backend
   const [categories, setCategories] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState('');
-  const [minPrice, setMinPrice] = useState('');
-  const [maxPrice, setMaxPrice] = useState('');
+  const [priceRange, setPriceRange] = useState([0, 100]); // Plage de prix pour le slider
+  const [maxPriceValue, setMaxPriceValue] = useState(100); // Valeur maximale du prix dans la base de données
   const [searchTerm, setSearchTerm] = useState('');
+  const [ordering, setOrdering] = useState(''); // Pour le tri
 
   useEffect(() => {
+    // Obtenir les catégories
     api.get('categories/').then((response) => {
       setCategories(response.data);
+    });
+
+    // Obtenir le prix maximum pour le slider
+    api.get('products/').then((response) => {
+      const prices = response.data.results.map((product) => product.price);
+      const maxPrice = Math.max(...prices, 100); // Valeur par défaut de 100 si pas de produits
+      setMaxPriceValue(maxPrice);
+      setPriceRange([0, maxPrice]);
     });
   }, []);
 
@@ -40,14 +51,17 @@ function CatalogPage() {
     if (selectedCategory) {
       params.category = selectedCategory;
     }
-    if (minPrice) {
-      params.price__gte = minPrice;
+    if (priceRange[0] > 0) {
+      params.price__gte = priceRange[0];
     }
-    if (maxPrice) {
-      params.price__lte = maxPrice;
+    if (priceRange[1] < maxPriceValue) {
+      params.price__lte = priceRange[1];
     }
     if (searchTerm) {
       params.search = searchTerm;
+    }
+    if (ordering) {
+      params.ordering = ordering;
     }
     params.page = currentPage;
 
@@ -60,7 +74,8 @@ function CatalogPage() {
 
   useEffect(() => {
     fetchProducts();
-  }, [selectedCategory, minPrice, maxPrice, searchTerm, currentPage]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedCategory, priceRange, searchTerm, ordering, currentPage]);
 
   const handleCategoryChange = (event) => {
     setSelectedCategory(event.target.value);
@@ -72,13 +87,13 @@ function CatalogPage() {
     setCurrentPage(1); // Réinitialiser à la première page
   };
 
-  const handleMinPriceChange = (event) => {
-    setMinPrice(event.target.value);
+  const handlePriceChange = (event, newValue) => {
+    setPriceRange(newValue);
     setCurrentPage(1); // Réinitialiser à la première page
   };
 
-  const handleMaxPriceChange = (event) => {
-    setMaxPrice(event.target.value);
+  const handleOrderingChange = (event) => {
+    setOrdering(event.target.value);
     setCurrentPage(1); // Réinitialiser à la première page
   };
 
@@ -104,7 +119,9 @@ function CatalogPage() {
           }}
         />
         <FormControl fullWidth sx={{ mb: 2 }}>
-          <InputLabel id="category-label" sx={{ color: 'text.primary' }}>Catégorie</InputLabel>
+          <InputLabel id="category-label" sx={{ color: 'text.primary' }}>
+            Catégorie
+          </InputLabel>
           <Select
             labelId="category-label"
             value={selectedCategory}
@@ -152,34 +169,61 @@ function CatalogPage() {
             ))}
           </Select>
         </FormControl>
-        <TextField
-          label="Prix minimum"
-          type="number"
-          value={minPrice}
-          onChange={handleMinPriceChange}
-          fullWidth
-          sx={{ mb: 2 }}
-          InputProps={{
-            sx: { color: 'black', backgroundColor: 'white' },
-          }}
-          InputLabelProps={{
-            sx: { color: 'black' },
-          }}
+
+        {/* Slider pour la plage de prix */}
+        <Typography gutterBottom color="text.primary">
+          Prix : {priceRange[0]}€ - {priceRange[1]}€
+        </Typography>
+        <Slider
+          value={priceRange}
+          onChange={handlePriceChange}
+          valueLabelDisplay="auto"
+          min={0}
+          max={maxPriceValue}
+          sx={{ color: 'primary.main', mb: 2 }}
         />
-        <TextField
-          label="Prix maximum"
-          type="number"
-          value={maxPrice}
-          onChange={handleMaxPriceChange}
-          fullWidth
-          sx={{ mb: 2 }}
-          InputProps={{
-            sx: { color: 'black', backgroundColor: 'white' },
-          }}
-          InputLabelProps={{
-            sx: { color: 'black' },
-          }}
-        />
+
+        {/* Menu déroulant pour le tri */}
+        <FormControl fullWidth sx={{ mb: 2 }}>
+          <InputLabel id="ordering-label" sx={{ color: 'text.primary' }}>
+            Trier par
+          </InputLabel>
+          <Select
+            labelId="ordering-label"
+            value={ordering}
+            onChange={handleOrderingChange}
+            label="Trier par"
+            sx={{
+              backgroundColor: 'white',
+              color: 'black',
+              '.MuiOutlinedInput-notchedOutline': {
+                borderColor: 'black',
+              },
+              '&:hover .MuiOutlinedInput-notchedOutline': {
+                borderColor: 'gray',
+              },
+              '.MuiSvgIcon-root': {
+                color: 'black',
+              },
+            }}
+            MenuProps={{
+              PaperProps: {
+                sx: {
+                  backgroundColor: 'white',
+                  color: 'black',
+                },
+              },
+            }}
+          >
+            <MenuItem value="">
+              <em>Par défaut</em>
+            </MenuItem>
+            <MenuItem value="name">Nom (A-Z)</MenuItem>
+            <MenuItem value="-name">Nom (Z-A)</MenuItem>
+            <MenuItem value="price">Prix croissant</MenuItem>
+            <MenuItem value="-price">Prix décroissant</MenuItem>
+          </Select>
+        </FormControl>
       </Grid>
 
       {/* Section des produits */}

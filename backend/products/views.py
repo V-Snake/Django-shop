@@ -8,12 +8,18 @@ class ProductViewSet(viewsets.ModelViewSet):
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
 
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    filter_backends = [
+        DjangoFilterBackend,
+        filters.SearchFilter,
+        filters.OrderingFilter,  # Ajout pour le tri
+    ]
     filterset_fields = {
         'category': ['exact'],
         'price': ['gte', 'lte'],
     }
     search_fields = ['name', 'description']
+    ordering_fields = ['name', 'price']  # Champs autorisés pour le tri
+    ordering = ['name']  # Tri par défaut
 
 class CategoryViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Category.objects.all()
