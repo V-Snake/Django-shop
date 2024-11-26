@@ -1,5 +1,3 @@
-# backend/settings.py
-
 """
 Django settings for backend project.
 
@@ -92,14 +90,24 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'eshop',  # Nom de votre base de données
+        'USER': 'postgres',  # Utilisateur admin
+        'PASSWORD': 'snake',  # Mot de passe de l'utilisateur postgres
+        'HOST': 'localhost',  # Serveur PostgreSQL
+        'PORT': '5432',  # Port par défaut de PostgreSQL
     }
 }
 
+
 # Configuration de Django REST Framework
 REST_FRAMEWORK = {
-    'DEFAULT_FILTER_BACKENDS': ['django_filters.rest_framework.DjangoFilterBackend'],
+    'DEFAULT_FILTER_BACKENDS': [
+        'django_filters.rest_framework.DjangoFilterBackend',
+        'rest_framework.filters.SearchFilter',
+    ],
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 5,
 }
 
 # Password validation

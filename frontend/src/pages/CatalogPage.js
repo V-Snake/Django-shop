@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import api from '../services/api';
 import {
-  Grid2,
+  Grid,
   TextField,
   Select,
   MenuItem,
@@ -12,15 +12,21 @@ import {
   CardMedia,
   Typography,
   Button,
+  Pagination,
 } from '@mui/material';
 import { Link } from 'react-router-dom';
 
 function CatalogPage() {
   const [products, setProducts] = useState([]);
+  const [count, setCount] = useState(0); // Nombre total de produits
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const PAGE_SIZE = 5; // Doit correspondre à PAGE_SIZE dans le backend
   const [categories, setCategories] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState('');
   const [minPrice, setMinPrice] = useState('');
   const [maxPrice, setMaxPrice] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     api.get('categories/').then((response) => {
@@ -28,8 +34,9 @@ function CatalogPage() {
     });
   }, []);
 
-  useEffect(() => {
+  const fetchProducts = () => {
     let params = {};
+
     if (selectedCategory) {
       params.category = selectedCategory;
     }
@@ -39,20 +46,63 @@ function CatalogPage() {
     if (maxPrice) {
       params.price__lte = maxPrice;
     }
+    if (searchTerm) {
+      params.search = searchTerm;
+    }
+    params.page = currentPage;
 
     api.get('products/', { params }).then((response) => {
-      setProducts(response.data);
+      setProducts(response.data.results);
+      setCount(response.data.count);
+      setTotalPages(Math.ceil(response.data.count / PAGE_SIZE));
     });
-  }, [selectedCategory, minPrice, maxPrice]);
+  };
+
+  useEffect(() => {
+    fetchProducts();
+  }, [selectedCategory, minPrice, maxPrice, searchTerm, currentPage]);
 
   const handleCategoryChange = (event) => {
     setSelectedCategory(event.target.value);
+    setCurrentPage(1); // Réinitialiser à la première page
+  };
+
+  const handleSearchChange = (event) => {
+    setSearchTerm(event.target.value);
+    setCurrentPage(1); // Réinitialiser à la première page
+  };
+
+  const handleMinPriceChange = (event) => {
+    setMinPrice(event.target.value);
+    setCurrentPage(1); // Réinitialiser à la première page
+  };
+
+  const handleMaxPriceChange = (event) => {
+    setMaxPrice(event.target.value);
+    setCurrentPage(1); // Réinitialiser à la première page
+  };
+
+  const handlePageChange = (event, value) => {
+    setCurrentPage(value);
   };
 
   return (
-    <Grid2 container spacing={2} sx={{ padding: 2 }}>
+    <Grid container spacing={2} sx={{ padding: 2 }}>
       {/* Section des filtres */}
-      <Grid2 xs={12} sm={3}>
+      <Grid item xs={12} sm={3}>
+        <TextField
+          label="Rechercher"
+          value={searchTerm}
+          onChange={handleSearchChange}
+          fullWidth
+          sx={{ mb: 2 }}
+          InputProps={{
+            sx: { color: 'black', backgroundColor: 'white' },
+          }}
+          InputLabelProps={{
+            sx: { color: 'black' },
+          }}
+        />
         <FormControl fullWidth sx={{ mb: 2 }}>
           <InputLabel id="category-label" sx={{ color: 'text.primary' }}>Catégorie</InputLabel>
           <Select
@@ -61,23 +111,23 @@ function CatalogPage() {
             onChange={handleCategoryChange}
             label="Catégorie"
             sx={{
-              backgroundColor: 'white', // Fond blanc pour le sélecteur
-              color: 'black', // Texte noir pour le sélecteur
+              backgroundColor: 'white',
+              color: 'black',
               '.MuiOutlinedInput-notchedOutline': {
-                borderColor: 'black', // Bordure noire
+                borderColor: 'black',
               },
               '&:hover .MuiOutlinedInput-notchedOutline': {
-                borderColor: 'gray', // Bordure grise au survol
+                borderColor: 'gray',
               },
               '.MuiSvgIcon-root': {
-                color: 'black', // Icône noire
+                color: 'black',
               },
             }}
             MenuProps={{
               PaperProps: {
                 sx: {
-                  backgroundColor: 'white', // Fond blanc pour le menu déroulant
-                  color: 'black', // Texte noir pour les options
+                  backgroundColor: 'white',
+                  color: 'black',
                 },
               },
             }}
@@ -90,10 +140,10 @@ function CatalogPage() {
                 key={category.id}
                 value={category.id}
                 sx={{
-                  backgroundColor: 'white', // Fond blanc pour chaque option
-                  color: 'black', // Texte noir pour chaque option
+                  backgroundColor: 'white',
+                  color: 'black',
                   '&:hover': {
-                    backgroundColor: '#f0f0f0', // Fond gris clair au survol
+                    backgroundColor: '#f0f0f0',
                   },
                 }}
               >
@@ -106,43 +156,39 @@ function CatalogPage() {
           label="Prix minimum"
           type="number"
           value={minPrice}
-          onChange={(e) => setMinPrice(e.target.value)}
+          onChange={handleMinPriceChange}
           fullWidth
           sx={{ mb: 2 }}
-          slotProps={{
-            input: {
-              sx: { color: 'black', backgroundColor: 'white' },
-            },
-            label: {
-              sx: { color: 'black' },
-            },
+          InputProps={{
+            sx: { color: 'black', backgroundColor: 'white' },
+          }}
+          InputLabelProps={{
+            sx: { color: 'black' },
           }}
         />
         <TextField
           label="Prix maximum"
           type="number"
           value={maxPrice}
-          onChange={(e) => setMaxPrice(e.target.value)}
+          onChange={handleMaxPriceChange}
           fullWidth
           sx={{ mb: 2 }}
-          slotProps={{
-            input: {
-              sx: { color: 'black', backgroundColor: 'white' },
-            },
-            label: {
-              sx: { color: 'black' },
-            },
+          InputProps={{
+            sx: { color: 'black', backgroundColor: 'white' },
+          }}
+          InputLabelProps={{
+            sx: { color: 'black' },
           }}
         />
-      </Grid2>
+      </Grid>
 
       {/* Section des produits */}
-      <Grid2 xs={12} sm={9}>
-        <Grid2 container spacing={2}>
+      <Grid item xs={12} sm={9}>
+        <Grid container spacing={2}>
           {products.map((product) => {
             const imageUrl = product.image;
             return (
-              <Grid2 xs={12} sm={6} md={4} key={product.id}>
+              <Grid item xs={12} sm={6} md={4} key={product.id}>
                 <Card sx={{ backgroundColor: '#1e1e1e' }}>
                   <CardMedia
                     component="img"
@@ -169,12 +215,22 @@ function CatalogPage() {
                     </Button>
                   </CardContent>
                 </Card>
-              </Grid2>
+              </Grid>
             );
           })}
-        </Grid2>
-      </Grid2>
-    </Grid2>
+        </Grid>
+        {/* Contrôles de pagination */}
+        {totalPages > 1 && (
+          <Pagination
+            count={totalPages}
+            page={currentPage}
+            onChange={handlePageChange}
+            color="primary"
+            sx={{ mt: 2, display: 'flex', justifyContent: 'center' }}
+          />
+        )}
+      </Grid>
+    </Grid>
   );
 }
 
